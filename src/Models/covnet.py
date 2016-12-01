@@ -28,29 +28,30 @@ valid = data['train'][:350]
 test = data['val']
 
 l_train = data['train_y_single'][350:] - 1
-l_valid = data['train_y_single'][350:] - 1
+l_valid = data['train_y_single'][:350] - 1
 
 n_classes = 8
 n_data = train.shape[0]
+n_valid = valid.shape[0]
 
 # create one-hot representation of data
 labels_train = np.zeros((n_data, n_classes), dtype=np.float32)
 labels_train[np.arange(n_data), l_train] = 1.0
 
-labels_valid = np.zeros((n_data, n_classes), dtype=np.float32)
-labels_valid[np.arange(n_data), l_valid] = 1.0
+labels_valid = np.zeros((n_valid, n_classes), dtype=np.float32)
+labels_valid[np.arange(n_valid), l_valid] = 1.0
 # computations
 n_channel = 3 if color else 1
 
 ############################# hyper-parameters #################################
-learning_rate = 0.0001
+learning_rate = 0.00015
 n_epoches = 2000
-batch_size = 80 # 500
+batch_size = 150 # 500
 
 # Network Parameters
 n_input = 128 * 128 * n_channel
 dropout = 0.85
-momentum = 0.008          # used if momentum implemented
+momentum = 0.002          # used if momentum implemented
 
 
 # computations
@@ -167,6 +168,8 @@ correct_pred = tf.cast(tf.equal(predictions, tf.argmax(y, 1)), tf.float32)
 
 accuracy = tf.reduce_mean(correct_pred)
 
+accuracy_valid = tf.reduce_mean(correct_pred)
+
 # Initializing the variables
 init = tf.initialize_all_variables()
 
@@ -255,6 +258,7 @@ with tf.name_scope('out'):
 
 tf.image_summary('CNN logits', tf.reshape(logits, [1, batch_size, n_classes, 1]))
 tf.scalar_summary('accuracy', accuracy)
+tf.scalar_summary('accuracy validation', accuracy_valid)
 # TODO: Implement F1 score for x and y tensor
 tf.scalar_summary('(cost) cross entropy', cost)
 #tf.histogram_summary('num correct', correct_pred)
@@ -283,7 +287,7 @@ with tf.Session() as sess:
     # Keep training until reach max iterations
     while epoch < n_epoches:
         np.random.shuffle(indices)
-        shuffled_labels, shuffled_train = labels[indices], train[indices]
+        shuffled_labels, shuffled_train = labels_train[indices], train[indices]
 
         for b in xrange(n_batches):
             batch_y = shuffled_labels[b*batch_size:(b+1)*batch_size]
@@ -295,6 +299,8 @@ with tf.Session() as sess:
         # DONE WITH EPOCH
         # Calculate batch loss and accuracy
 
+        acc_valid = sess.run(accuracy_valid, feed_dict={x: valid, y: labels_valid, keep_prob: 1.})
+
         loss, acc, pred, summ  = sess.run([
             cost, accuracy, predictions, summaries
             ], feed_dict={x: batch_x, y: batch_y, keep_prob: 1.})
@@ -303,7 +309,7 @@ with tf.Session() as sess:
         print(pred.min(), pred.max())
         print("Epoch: " + str(epoch + 1) + ", Minibatch Loss= " + \
               "{:.5f}".format(loss) + ", Training Accuracy= " + \
-              "{:.5f}".format(acc))
+              "{:.5f}".format(acc) + ", Validation Accuracy=" + "{:.5f}".format(acc_valid))
 
         epoch += 1
 
@@ -311,20 +317,6 @@ with tf.Session() as sess:
 
     # close the writer
     writer.close()
-
-    # calculate the accuracy for all training set
-    acc_array = np.empty((20,))
-
-    for ii in xrange(20):
-        acc_array[ii] = sess.run(
-            accuracy,
-            feed_dict={
-                x: train[ii*350:(ii+1)*350],
-                y: labels[ii*350:(ii+1)*350],
-                keep_prob: 1.
-            }
-        )
-    print("Final Accuracy: " + str(acc_array.mean()))
 
     # run on the valiation set and write to file
     test_cls = sess.run(predictions, feed_dict={x: test, keep_prob: 1.})
