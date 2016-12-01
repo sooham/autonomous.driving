@@ -1,27 +1,51 @@
+
 import csv
+
 import os
+from os.path import join, abspath
 
 import numpy as np
-
 from matplotlib.pyplot import imread
-from augmentation import distort
 
 
-LABELS_SINGLE_FILE      = 'train.csv'
-LABELS_MULT_FILE        = 'train_bonus.txt'
-GIST_FILE               = 'gist_output.csv'
-TRAIN_DIR               = 'train'
-VAL_DIR                 = 'val'
-TRAIN_SIZE              = 7000
-VAL_SIZE                = 970
+################ CONSTANT FOR FILES ########################
+# database sizes for road dataset
+ROAD_TRAIN_SIZE              = 289
+ROAD_TEST_SIZE               = 290
+ROAD_GT_SIZE                 = 384
 
-path = os.path.join(os.environ.get('ASSIGNMENT_DIR'), 'data')
-if not path:
-    raise IOError('ASSIGNMENT_DIR not set, please set it to location of data folder')
-path = os.path.abspath(path)
+STEREO_SUBDIRS               = ['data_road', 'data_road']
+DATSET_TYPES                 = ['training', 'testing']
+CALIB_FOLDER                 = 'calib'
 
-if not os.path.isdir(path):
-    raise IOError('ASSIGNMENT_DIR must point to a folder')
+
+
+
+################ CREATING PATHS ############################
+
+DIR_420 = os.environ.get('ASSIGNMENT_DIR')
+if not DIR_420:
+    raise IOError('CSC420 shell var not set, please set it to root folder')
+
+DIR_420_DATA = join(abspath(DIR_420), 'data')
+if not DIR_420_DATA:
+    raise IOError('Dataset folder cannot be found, please place as "data" under root')
+
+
+############### HELPER FUNCTIONS ###########################
+string_to_matrix = lambda s: np.array(map(np.float32, s.split())).reshape(3, -1)
+
+def get_calib_matries(path, fname):
+    '''
+    Return the calibration matrices for the given path filename without extension.
+    The output is a dictionary of numpy ndarrays using the original keys in
+    the dataset.
+    '''
+    with open(join(path, fname + '.txt'), 'rb') as fopen:
+        line_reader = csv.reader(fopen, delimiter=':', lineterminator='\n')
+        return {line[0]: string_to_matrix(line[1]) for line in line_reader}
+
+
 
 
 def rgb2gray(img):
@@ -39,7 +63,7 @@ def apply_distortion(data):
     class_8 = train[labels == 8]
     class_7 = train[labels == 7]
     class_6 = train[labels == 6]
-    class_4 = train[labels == 4]
+    class_4 = train[labels == 4][:200]
     class_3 = train[shuffle][labels[shuffle] == 3][:200]
 
     class_1 = train[shuffle][labels[shuffle] == 1][:150]

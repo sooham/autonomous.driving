@@ -1,10 +1,7 @@
 '''
-This library is used for calculating statistic on the
-dataset and an classification results. i.e F1 score,
-Recall and Precision.
-
-TODO: Look into sklearn.metrics for scikit version of cohens kappa
-      and precision accuracy curve.
+This library is used for calculating statistics on the dataset and
+classification results.
+i.e F1 score, Recall and Precision.
 '''
 
 
