@@ -8,31 +8,7 @@ import math
 import numpy as np
 from matplotlib.pyplot import imread
 
-
-################ CONSTANT FOR FILES ########################
-# database sizes for road dataset
-ROAD_TRAIN_SIZE              = 289
-ROAD_TEST_SIZE               = 290
-
-IMG_WIDTH                    = 375
-IMG_WIDTH                    = 1242
-
-STEREO_SUBDIRS               = ['data_road', 'data_road']
-CALIB_FOLDER                 = 'calib'
-LEFT_IMAGE_FOLDER            = 'image_2'
-GROUND_IMAGE_FOLDER          = 'gt_image_2'
-RIGHT_IMAGE_FOLDER           = 'image_3'
-
-################ CREATING PATHS ############################
-
-DIR_420 = os.environ.get('CSC420')
-if not DIR_420:
-    raise IOError('CSC420 shell var not set, please set it to root folder')
-
-DIR_420_DATA = join(abspath(DIR_420), 'data')
-if not DIR_420_DATA:
-    raise IOError('Dataset folder cannot be found, please place as "data" under root')
-
+from constants import *
 
 ############### HELPER FUNCTIONS ###########################
 string_to_matrix = lambda s: np.array(map(np.float32, s.split())).reshape(3, -1)
@@ -45,7 +21,12 @@ def get_calib_matries(path, fname):
     '''
     with open(join(path, fname + '.txt'), 'rb') as fopen:
         line_reader = csv.reader(fopen, delimiter=':', lineterminator='\n')
-        return {line[0]: string_to_matrix(line[1]) for line in line_reader}
+        calib = {line[0]: string_to_matrix(line[1]) for line in line_reader}
+        calib['Tr_cam_to_road'] = np.vstack((calib['Tr_cam_to_road'], np.array([0., 0., 0., 1.])))
+        extended_R0 = np.diag([0., 0., 0., 1.])
+        extended_R0[:3, :3] = calib['R0_rect']
+        calib['R0_rect'] = extended_R0
+        return calib
 
 def get_image(path, fname):
     '''
@@ -53,7 +34,14 @@ def get_image(path, fname):
     The output is a flattened 3 channel numpy ndarray representing the image.
     '''
     # no need to divide by 255, it is already in float
-    return imread(join(path, fname + '.png')).ravel()
+    return imread(join(path, fname + '.png'))
+
+def get_depth_image(path, fname):
+    '''
+    Return the depth image for the given path filename without extension.
+    The output is a flattened 1 channel numpy ndarray representing the image.
+    '''
+    return np.genfromtxt(join(path, fname + '_depth.csv'), delimiter=',')
 
 def get_ground_images(path, fname):
     '''
@@ -72,7 +60,7 @@ def get_ground_images(path, fname):
     return result
 
 #################  MAIN FUNCTION ###########################
-def read_dataset_road(typ, batch_size, mode='lrc'):
+def read_dataset_road(typ, batch_size, mode='lrdic'):
     '''
         This is a generator for the road dataset as it is too large
         to fit in memory in its entirety. Returns left right stereo pairs
@@ -80,9 +68,10 @@ def read_dataset_road(typ, batch_size, mode='lrc'):
 
         typ: 'training' or 'testing'
 
-        mode: any subset of the string "lrgc" for training sets
+        mode: any subset of the string "lrdgc" for training sets
         specifies the images per batch returned, "l" = left, "r" = right
-        "g" = ground truth, "c" = calibration matrix.
+        "g" = ground truth, "c" = calibration matrix. "d" = depth,
+        "i" for disparity
 
         The generator will throw StopIteration Error when done.
 
@@ -98,6 +87,8 @@ def read_dataset_road(typ, batch_size, mode='lrc'):
         'r': get_image,
         'c': get_calib_matries,
         'g': get_ground_images,
+        'd': get_depth_image,
+        'i': get_image
     }
 
     dir_paths = {}
@@ -110,6 +101,10 @@ def read_dataset_road(typ, batch_size, mode='lrc'):
         dir_paths['c'] = join(DIR_420_DATA, 'data_road', typ, CALIB_FOLDER)
     if 'g' in mode:
         dir_paths['g'] = join(DIR_420_DATA, 'data_road', typ, GROUND_IMAGE_FOLDER)
+    if 'd' in mode:
+        dir_paths['d'] = join(DIR_420_DATA, 'data_road', typ, DEPTH_IMAGE_FOLDER)
+    if 'i' in mode:
+        dir_paths['i'] = join(DIR_420_DATA, 'data_road', typ, DISP_IMAGE_FOLDER)
 
     listing = [fname.split('.')[0] for fname in os.listdir(
         join(DIR_420_DATA, 'data_road', typ, LEFT_IMAGE_FOLDER)
@@ -131,6 +126,7 @@ def read_dataset_road(typ, batch_size, mode='lrc'):
         cur += 1
 
 
+# TODO: THIS NEEDS TO BE FIXED
 def write(filename, val_predictions, hidden_predictions, include_hidden=False):
     '''
         val_predictions is a numpy.ndarray of class values for the validation set.

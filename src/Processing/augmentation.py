@@ -1,3 +1,5 @@
+from __future__ import division
+
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage.interpolation import affine_transform, rotate, zoom
