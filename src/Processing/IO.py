@@ -11,6 +11,7 @@ from matplotlib.pyplot import imread
 from constants import *
 
 ############### HELPER FUNCTIONS ###########################
+
 string_to_matrix = lambda s: np.array(map(np.float32, s.split())).reshape(3, -1)
 
 def get_calib_matries(path, fname):
@@ -36,12 +37,11 @@ def get_image(path, fname):
     # no need to divide by 255, it is already in float
     return imread(join(path, fname + '.png'))
 
-def get_depth_image(path, fname):
+def get_npy(path, fname):
     '''
-    Return the depth image for the given path filename without extension.
-    The output is a flattened 1 channel numpy ndarray representing the image.
+    Return the depth array saved as .npy for the given path filename without extension.
     '''
-    return np.genfromtxt(join(path, fname + '_depth.csv'), delimiter=',')
+    return np.load(join(path, fname + '.npy'))
 
 def get_ground_images(path, fname):
     '''
@@ -87,8 +87,8 @@ def read_dataset_road(typ, batch_size, mode='lrdic'):
         'r': get_image,
         'c': get_calib_matries,
         'g': get_ground_images,
-        'd': get_depth_image,
-        'i': get_image
+        'd': get_npy,
+        'i': get_npy
     }
 
     dir_paths = {}

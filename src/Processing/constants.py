@@ -15,8 +15,7 @@ NUM_UM_TEST                  = 96
 NUM_UMM_TEST                 = 94
 NUM_UU_TEST                  = 100
 
-IMG_HEIGHT                   = 375
-IMG_WIDTH                    = 1242
+# do not put IMG_WIDTH and IMG_HEIGHT, they're not constant
 IMG_CHANNELS                 = 3
 
 STEREO_SUBDIRS               = ['data_road', 'data_road']
